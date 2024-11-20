@@ -192,14 +192,14 @@
             try {
                 const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
                 const typeMap = ['sellPut', 'sellCall', 'buyPut', 'buyCall', 'buyFuture', 'sellFuture'];
-                
+                       
                 positions = data.p.map(pos => ({
-                    type: typeMap[pos[0]],
-                    strikePrice: pos[1],
-                    quantity: pos[2],
-                    price: pos[3]
+                   type: typeMap[pos[0]],
+                   strikePrice: pos[1],
+                   quantity: pos[2],
+                   price: pos[3]
                 }));
-                realizedPnL = data.r;
+                realizedPnL = data.r || 0;
                 document.getElementById('realizedPnL').value = realizedPnL;
                 updatePositionTable();
                 calculateAndDraw();
@@ -216,17 +216,17 @@
             }
         
             const data = {
-                p: positions.map(pos => [
-                    pos.type === 'sellPut' ? 0 :
-                    pos.type === 'sellCall' ? 1 :
-                    pos.type === 'buyPut' ? 2 :
-                    pos.type === 'buyCall' ? 3 :
-                    pos.type === 'buyFuture' ? 4 : 5,
-                    pos.strikePrice,
-                    pos.quantity,
-                    pos.price
-                ]),
-                r: realizedPnL
+               p: positions.map(pos => [
+                   pos.type === 'sellPut' ? 0 :
+                   pos.type === 'sellCall' ? 1 :
+                   pos.type === 'buyPut' ? 2 :
+                   pos.type === 'buyCall' ? 3 :
+                   pos.type === 'buyFuture' ? 4 : 5,
+                   pos.strikePrice,
+                   pos.quantity,
+                   pos.price
+               ]),
+               r: parseFloat(document.getElementById('realizedPnL').value) || 0
             };
             
             const hash = btoa(JSON.stringify(data))
