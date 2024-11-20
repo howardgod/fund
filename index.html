@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期權期貨損益分析</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.1.0/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        select, input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.remove {
+            background-color: #f44336;
+        }
+        button.remove:hover {
+            background-color: #da190b;
+        }
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .profit {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .loss {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .zero-points {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .zero-points h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>期權期貨損益分析</h1>
+
+        <div class="form-group">
+            <label>新增部位</label>
+            <select id="positionType">
+                <option value="sellPut">賣出 Put</option>
+                <option value="sellCall">賣出 Call</option>
+                <option value="buyPut">買入 Put</option>
+                <option value="buyCall">買入 Call</option>
+                <option value="buyFuture">買入期貨</option>
+                <option value="sellFuture">賣出期貨</option>
+            </select>
+            <input type="number" id="strikePrice" placeholder="履約價" step="50">
+            <input type="number" id="quantity" placeholder="口數">
+            <input type="number" id="price" placeholder="成交價" step="0.1">
+            <button onclick="addPosition()">新增部位</button>
+        </div>
+
+        <table id="positionTable">
+            <thead>
+                <tr>
+                    <th>類型</th>
+                    <th>履約價</th>
+                    <th>口數</th>
+                    <th>成交價</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="form-group" style="margin-top: 20px;">
+            <label for="realizedPnL">已平倉損益 (TWD)</label>
+            <input type="number" id="realizedPnL" value="0" step="1000">
+        </div>
+
+        <div class="button-group">
+            <button onclick="generateAndReload()">計算損益</button>
+            <button onclick="resetAll()" class="remove">清除所有</button>
+        </div>
+
+        <div class="zero-points">
+            <h3>損益平衡點</h3>
+            <div id="zeroPoints"></div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="profitChart"></canvas>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card profit">
+                <h3>最大獲利</h3>
+                <div id="maxProfit">-</div>
+            </div>
+            <div class="stat-card loss">
+                <h3>最大虧損</h3>
+                <div id="maxLoss">-</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let positions = [];
+        let chart = null;
+        let realizedPnL = 0;
+
+        window.onload = function() {
+            const path = window.location.pathname;
+            const hashString = path.split('/').pop();
+            
+            if (hashString && hashString !== 'index.html') {
+                try {
+                    loadFromHash(hashString);
+                } catch (e) {
+                    console.error('Invalid hash, loading default page');
+                    window.location.pathname = '/index.html';
+                }
+            }
+        };
+
+        function loadFromHash(hash) {
+            try {
+                const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
+                positions = data.positions;
+                realizedPnL = data.realizedPnL;
+                document.getElementById('realizedPnL').value = realizedPnL;
+                updatePositionTable();
+                calculateAndDraw();
+            } catch (e) {
+                console.error('Invalid hash');
+                throw e;
+            }
+        }
+
+        function generateAndReload() {
+            if (positions.length === 0) {
+                alert('請先新增部位');
+                return;
+            }
+            // [type, strike, qty, price]
+            const data = {
+                    p: positions.map(pos => [
+                        ['sp','sc','bp','bc','bf','sf'].indexOf(pos.type),
+                        pos.strikePrice,
+                        pos.quantity,
+                        pos.price
+                    ]),
+                    r: realizedPnL
+                };
+                
+            const hash = btoa(JSON.stringify(data))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+                
+            window.location.pathname = `/index.html/${hash}`;
+        }
+
+        function resetAll() {
+            positions = [];
+            realizedPnL = 0;
+            document.getElementById('realizedPnL').value = 0;
+            updatePositionTable();
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            document.getElementById('maxProfit').textContent = '-';
+            document.getElementById('maxLoss').textContent = '-';
+            document.getElementById('zeroPoints').innerHTML = '';
+            window.location.pathname = '/index.html';
+        }
+
+        function findZeroPoints(pricePoints, profitPoints) {
+            const zeroPoints = [];
+            
+            for (let i = 1; i < profitPoints.length; i++) {
+                const profit1 = profitPoints[i - 1];
+                const profit2 = profitPoints[i];
+                
+                if ((profit1 < 0 && profit2 > 0) || (profit1 > 0 && profit2 < 0)) {
+                    const index = Math.abs(profit1) < Math.abs(profit2) ? i - 1 : i;
+                    
+                    zeroPoints.push({
+                        price: pricePoints[index],
+                        index: index,
+                        profit: profitPoints[index]
+                    });
+                }
+                else if (profit1 === 0) {
+                    zeroPoints.push({
+                        price: pricePoints[i - 1],
+                        index: i - 1,
+                        profit: 0
+                    });
+                }
+            }
+            
+            return zeroPoints;
+        }
+
+        function addPosition() {
+            const type = document.getElementById('positionType').value;
+            const strikePrice = parseFloat(document.getElementById('strikePrice').value);
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const price = parseFloat(document.getElementById('price').value);
+
+            if (!strikePrice || !quantity || !price) {
+                alert('請填寫所有欄位');
+                return;
+            }
+
+            positions.push({
+                type,
+                strikePrice,
+                quantity,
+                price
+            });
+            updatePositionTable();
+            clearInputs();
+        }
+
+        function clearInputs() {
+            document.getElementById('strikePrice').value = '';
+            document.getElementById('quantity').value = '';
+            document.getElementById('price').value = '';
+        }
+
+        function removePosition(index) {
+            positions.splice(index, 1);
+            updatePositionTable();
+        }
+
+        function updatePositionTable() {
+            const tbody = document.querySelector('#positionTable tbody');
+            tbody.innerHTML = '';
+
+            positions.forEach((position, index) => {
+                const tr = document.createElement('tr');
+                const typeText = getTypeText(position.type);
+                
+                tr.innerHTML = `
+                    <td>${typeText}</td>
+                    <td>${position.strikePrice}</td>
+                    <td>${position.quantity}</td>
+                    <td>${position.price}</td>
+                    <td><button class="remove" onclick="removePosition(${index})">移除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getTypeText(type) {
+            const types = {
+                'sellPut': '賣出 Put',
+                'sellCall': '賣出 Call',
+                'buyPut': '買入 Put',
+                'buyCall': '買入 Call',
+                'buyFuture': '買入期貨',
+                'sellFuture': '賣出期貨'
+            };
+            return types[type];
+        }
+
+        function calculateProfit(spotPrice) {
+            let totalProfit = 0;
+
+            positions.forEach(position => {
+                let profit = 0;
+                const value = position.quantity * position.price * 200;
+
+                switch(position.type) {
+                    case 'sellPut':
+                        profit = value - position.quantity * Math.max(0, position.strikePrice - spotPrice) * 200;
+                        break;
+                    case 'sellCall':
+                        profit = value - position.quantity * Math.max(0, spotPrice - position.strikePrice) * 200;
+                        break;
+                    case 'buyPut':
+                        profit = -value + position.quantity * Math.max(0, position.strikePrice - spotPrice) * 200;
+                        break;
+                    case 'buyCall':
+                        profit = -value + position.quantity * Math.max(0, spotPrice - position.strikePrice) * 200;
+                        break;
+                    case 'buyFuture':
+                        profit = position.quantity * (spotPrice - position.strikePrice) * 200;
+                        break;
+                    case 'sellFuture':
+                        profit = position.quantity * (position.strikePrice - spotPrice) * 200;
+                        break;
+                }
+                totalProfit += profit;
+            });
+
+            return totalProfit;
+        }
+
+        function calculateRange() {
+            if (positions.length === 0) return null;
+            
+            const strikePrices = positions.map(p => p.strikePrice);
+            const minStrike = Math.min(...strikePrices);
+            const maxStrike = Math.max(...strikePrices);
+            
+            return {
+                lower: minStrike - 300,
+                upper: maxStrike + 300
+            };
+        }
+
+        function calculateAndDraw() {
+            if (positions.length === 0) {
+                alert('請先新增部位');
+                return;
+            }
+
+            realizedPnL = parseFloat(document.getElementById('realizedPnL').value) || 0;
+
+            const range = calculateRange();
+            if (!range) return;
+
+            const pricePoints = [];
+            const profitPoints = [];
+
+            for (let price = range.lower; price <= range.upper; price += 10) {
+                pricePoints.push(price);
+                profitPoints.push(calculateProfit(price));
+            }
+
+            const adjustedProfitPoints = profitPoints.map(profit => profit + realizedPnL);
+
+            const zeroPoints = findZeroPoints(pricePoints, adjustedProfitPoints);
+            document.getElementById('zeroPoints').innerHTML = 
+                zeroPoints.length > 0 ? 
+                `損益平衡點位：${zeroPoints.map(p => p.price).join(', ')}` : 
+                '無損益平衡點';
+
+            const maxProfit = Math.max(...adjustedProfitPoints);
+            const maxLoss = Math.min(...adjustedProfitPoints);
+
+            document.getElementById('maxProfit').textContent = 
+                Math.round(maxProfit).toLocaleString() + ' TWD';
+            document.getElementById('maxLoss').textContent = 
+                Math.round(maxLoss).toLocaleString() + ' TWD';
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    annotation: {
+                        annotations: zeroPoints.reduce((acc, point, i) => ({
+                            ...acc,
+                            [`point${i}`]: {
+                                type: 'point',
+                                xValue: point.index,
+                                yValue: 0,
+                                backgroundColor: 'rgba(255, 99, 132, 0.25)',
+                                borderColor: 'red',
+                                borderWidth: 20,
+                                radius: 100
+                            },
+                            [`label${i}`]: {
+                                type: 'label',
+                                xValue: point.index,
+                                yValue: 0,
+                                content: `${point.price}`,
+                                backgroundColor: 'white',
+                                font: {
+                                    size: 16
+                                },
+                                yAdjust: -30
+                            }
+                        }), {})
+                    },
+                    title: {
+                        display: true,
+                        text: '損益曲線'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `損益: ${Math.round(context.raw).toLocaleString()} TWD`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: '損益 (TWD)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '大盤點數'
+                        }
+                    }
+                }
+            };
+
+            const config = {
+                type: 'line',
+                data: {
+                    labels: pricePoints,
+                    datasets: [{
+                        label: '損益 (TWD)',
+                        data: adjustedProfitPoints,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: options
+            };
+
+            chart = new Chart(ctx, config);
+        }
+    </script>
+</body>
+</html>
