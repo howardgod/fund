@@ -218,8 +218,8 @@
                 .replace(/\//g, '_')
                 .replace(/=/g, '');
             
-            const baseUrl = window.location.pathname; // Gets /fund/index.html
-            window.location.href = baseUrl + '#' + hash;
+            window.location.hash = hash;
+            calculateAndDraw();  // Call this instead of reload
         }
 
         function resetAll() {
@@ -425,17 +425,13 @@
                                 type: 'point',
                                 xValue: point.index,
                                 yValue: 0,
-                                backgroundColor: 'rgba(255, 99, 132, 0.25)',
-                                borderColor: 'red',
-                                borderWidth: 20,
-                                radius: 100
+                                backgroundColor: 'rgba(255, 99, 132, 0.25)'
                             },
                             [`label${i}`]: {
                                 type: 'label',
                                 xValue: point.index,
                                 yValue: 0,
-                                content: `${point.price}`,
-                                backgroundColor: 'white',
+                                content: `${point.price}`,                                
                                 font: {
                                     size: 16
                                 },
