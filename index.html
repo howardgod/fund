@@ -191,18 +191,26 @@
         function loadFromHash(hash) {
             try {
                 const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
-                positions = data.p.map(pos => ({
-                    type: ['sp','sc','bp','bc','bf','sf'][pos[0]],
-                    strikePrice: pos[1],
-                    quantity: pos[2],
-                    price: pos[3]
-                }));
+                // Check data structure before assignment
+                console.log('Decoded data:', data);
+                
+                // Each position should be [type_index, strikePrice, quantity, price]
+                positions = data.p.map(pos => {
+                    console.log('Position data:', pos);
+                    return {
+                        type: ['sp','sc','bp','bc','bf','sf'][pos[0]], // pos[0] should be 0 for 'sp'
+                        strikePrice: pos[1], // should be 23500
+                        quantity: pos[2],    // should be 100
+                        price: pos[3]        // should be 100
+                    };
+                });
                 realizedPnL = data.r;
+                
                 document.getElementById('realizedPnL').value = realizedPnL;
                 updatePositionTable();
                 calculateAndDraw();
             } catch (e) {
-                console.error('Invalid hash');
+                console.error('Invalid hash decode:', e);
                 throw e;
             }
         }
