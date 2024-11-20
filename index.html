@@ -176,15 +176,13 @@
         let realizedPnL = 0;
 
         window.onload = function() {
-            const path = window.location.pathname;
-            const hashString = path.split('/').pop();
+            const hash = window.location.hash.substring(1); // Remove '#'
             
-            if (hashString && hashString !== 'index.html') {
+            if (hash) {
                 try {
-                    loadFromHash(hashString);
+                    loadFromHash(hash);
                 } catch (e) {
                     console.error('Invalid hash, loading default page');
-                    window.location.pathname = '/index.html';
                 }
             }
         };
@@ -208,23 +206,19 @@
                 alert('請先新增部位');
                 return;
             }
-            // [type, strike, qty, price]
+
             const data = {
-                    p: positions.map(pos => [
-                        ['sp','sc','bp','bc','bf','sf'].indexOf(pos.type),
-                        pos.strikePrice,
-                        pos.quantity,
-                        pos.price
-                    ]),
-                    r: realizedPnL
-                };
-                
+                positions: positions,
+                realizedPnL: parseFloat(document.getElementById('realizedPnL').value) || 0
+            };
+            
             const hash = btoa(JSON.stringify(data))
                 .replace(/\+/g, '-')
                 .replace(/\//g, '_')
                 .replace(/=/g, '');
                 
-            window.location.pathname = `/index.html/${hash}`;
+            window.location.hash = hash;
+            window.location.reload();
         }
 
         function resetAll() {
@@ -239,7 +233,7 @@
             document.getElementById('maxProfit').textContent = '-';
             document.getElementById('maxLoss').textContent = '-';
             document.getElementById('zeroPoints').innerHTML = '';
-            window.location.pathname = '/index.html';
+            window.location.hash = ''; // Clear hash
         }
 
         function findZeroPoints(pricePoints, profitPoints) {
