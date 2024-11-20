@@ -191,26 +191,20 @@
         function loadFromHash(hash) {
             try {
                 const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
-                // Check data structure before assignment
-                console.log('Decoded data:', data);
+                const typeMap = ['sellPut', 'sellCall', 'buyPut', 'buyCall', 'buyFuture', 'sellFuture'];
                 
-                // Each position should be [type_index, strikePrice, quantity, price]
-                positions = data.p.map(pos => {
-                    console.log('Position data:', pos);
-                    return {
-                        type: ['sp','sc','bp','bc','bf','sf'][pos[0]], // pos[0] should be 0 for 'sp'
-                        strikePrice: pos[1], // should be 23500
-                        quantity: pos[2],    // should be 100
-                        price: pos[3]        // should be 100
-                    };
-                });
+                positions = data.p.map(pos => ({
+                    type: typeMap[pos[0]],
+                    strikePrice: pos[1],
+                    quantity: pos[2],
+                    price: pos[3]
+                }));
                 realizedPnL = data.r;
-                
                 document.getElementById('realizedPnL').value = realizedPnL;
                 updatePositionTable();
                 calculateAndDraw();
             } catch (e) {
-                console.error('Invalid hash decode:', e);
+                console.error('Invalid hash');
                 throw e;
             }
         }
@@ -223,7 +217,11 @@
         
             const data = {
                 p: positions.map(pos => [
-                    ['sp','sc','bp','bc','bf','sf'].indexOf(pos.type),
+                    pos.type === 'sellPut' ? 0 :
+                    pos.type === 'sellCall' ? 1 :
+                    pos.type === 'buyPut' ? 2 :
+                    pos.type === 'buyCall' ? 3 :
+                    pos.type === 'buyFuture' ? 4 : 5,
                     pos.strikePrice,
                     pos.quantity,
                     pos.price
