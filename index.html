@@ -437,21 +437,22 @@
                     annotation: {
                         annotations: zeroPoints.reduce((acc, point, i) => ({
                             ...acc,
-                            [`point${i}`]: {
-                                type: 'point',
-                                xValue: point.index,
-                                yValue: 0,
-                                backgroundColor: 'rgba(255, 99, 132, 0.25)'
-                            },
-                            [`label${i}`]: {
-                                type: 'label',
-                                xValue: point.index,
-                                yValue: 0,
-                                content: `${point.price}`,                                
-                                font: {
-                                    size: 16
-                                },
-                                yAdjust: -30
+                            [`line${i}`]: {
+                                type: 'line',
+                                xMin: point.index,
+                                xMax: point.index,
+                                yMin: -4000000,
+                                yMax: 4000000,
+                                borderColor: '#666666',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: `${point.price}`,
+                                    display: true,
+                                    position: 'start',
+                                    backgroundColor: '#666666',
+                                    color: 'white'
+                                }
                             }
                         }), {})
                     },
