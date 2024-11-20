@@ -176,13 +176,14 @@
         let realizedPnL = 0;
 
         window.onload = function() {
-            const hash = window.location.hash.substring(1); // Remove '#'
+            const hash = window.location.hash.substring(1); // Remove '#' from #hashstring
             
             if (hash) {
                 try {
                     loadFromHash(hash);
                 } catch (e) {
                     console.error('Invalid hash, loading default page');
+                    window.location.href = window.location.pathname; // Reset to base URL
                 }
             }
         };
@@ -206,7 +207,7 @@
                 alert('請先新增部位');
                 return;
             }
-
+        
             const data = {
                 positions: positions,
                 realizedPnL: parseFloat(document.getElementById('realizedPnL').value) || 0
@@ -216,9 +217,9 @@
                 .replace(/\+/g, '-')
                 .replace(/\//g, '_')
                 .replace(/=/g, '');
-                
-            window.location.hash = hash;
-            window.location.reload();
+            
+            const baseUrl = window.location.pathname; // Gets /fund/index.html
+            window.location.href = baseUrl + '#' + hash;
         }
 
         function resetAll() {
@@ -233,9 +234,9 @@
             document.getElementById('maxProfit').textContent = '-';
             document.getElementById('maxLoss').textContent = '-';
             document.getElementById('zeroPoints').innerHTML = '';
-            window.location.hash = ''; // Clear hash
+            window.location.href = window.location.pathname; // Reset to base URL without hash
         }
-
+        
         function findZeroPoints(pricePoints, profitPoints) {
             const zeroPoints = [];
             
