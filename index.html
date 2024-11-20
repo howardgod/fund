@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>期權期貨損益分析</title>
-    <script src="chart.min.js"></script>
-    <script src="chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.1.0/chartjs-plugin-annotation.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -191,8 +191,13 @@
         function loadFromHash(hash) {
             try {
                 const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
-                positions = data.positions;
-                realizedPnL = data.realizedPnL;
+                positions = data.p.map(pos => ({
+                    type: ['sp','sc','bp','bc','bf','sf'][pos[0]],
+                    strikePrice: pos[1],
+                    quantity: pos[2],
+                    price: pos[3]
+                }));
+                realizedPnL = data.r;
                 document.getElementById('realizedPnL').value = realizedPnL;
                 updatePositionTable();
                 calculateAndDraw();
@@ -201,7 +206,7 @@
                 throw e;
             }
         }
-
+        
         function generateAndReload() {
             if (positions.length === 0) {
                 alert('請先新增部位');
@@ -209,8 +214,13 @@
             }
         
             const data = {
-                positions: positions,
-                realizedPnL: parseFloat(document.getElementById('realizedPnL').value) || 0
+                p: positions.map(pos => [
+                    ['sp','sc','bp','bc','bf','sf'].indexOf(pos.type),
+                    pos.strikePrice,
+                    pos.quantity,
+                    pos.price
+                ]),
+                r: realizedPnL
             };
             
             const hash = btoa(JSON.stringify(data))
@@ -219,7 +229,7 @@
                 .replace(/=/g, '');
             
             window.location.hash = hash;
-            calculateAndDraw();  // Call this instead of reload
+            calculateAndDraw();
         }
 
         function resetAll() {
