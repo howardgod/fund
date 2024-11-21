@@ -252,33 +252,72 @@
             document.getElementById('zeroPoints').innerHTML = '';
             window.location.href = window.location.pathname; // Reset to base URL without hash
         }
+
+        function findProfitCrossingRanges(pricePoints, profitPoints) {
+           const ranges = [];
+           
+           // Find ranges where profit crosses zero
+           for (let i = 1; i < profitPoints.length; i++) {
+               const profit1 = profitPoints[i - 1];
+               const profit2 = profitPoints[i];
+               
+               // Crosses from negative to positive or positive to negative
+               if ((profit1 < 0 && profit2 > 0) || (profit1 > 0 && profit2 < 0)) {
+                   ranges.push({
+                       lower: pricePoints[i - 1],
+                       upper: pricePoints[i]
+                   });
+               }
+           }
+           
+           return ranges;
+        }
+        
+        function calculatePricesAtZeroProfit(ranges) {
+           const zeroPrices = [];
+           
+           ranges.forEach(range => {
+               let closestPrice = null;
+               let minDifference = Infinity;
+               
+               // Check each price in the range
+               for (let price = range.lower; price <= range.upper; price++) {
+                   const profit = calculateProfit(price);
+                   const difference = Math.abs(profit);
+                   
+                   if (difference < minDifference) {
+                       minDifference = difference;
+                       closestPrice = price;
+                   }
+                   
+                   // If we found exact or very close match
+                   if (difference < 1) {
+                       closestPrice = price;
+                       break;
+                   }
+               }
+               
+               if (closestPrice !== null) {
+                   zeroPrices.push(closestPrice);
+               }
+           });
+           
+           return zeroPrices;
+        }
         
         function findZeroPoints(pricePoints, profitPoints) {
-            const zeroPoints = [];
-            
-            for (let i = 1; i < profitPoints.length; i++) {
-                const profit1 = profitPoints[i - 1];
-                const profit2 = profitPoints[i];
-                
-                if ((profit1 < 0 && profit2 > 0) || (profit1 > 0 && profit2 < 0)) {
-                    const index = Math.abs(profit1) < Math.abs(profit2) ? i - 1 : i;
-                    
-                    zeroPoints.push({
-                        price: pricePoints[index],
-                        index: index,
-                        profit: profitPoints[index]
-                    });
-                }
-                else if (profit1 === 0) {
-                    zeroPoints.push({
-                        price: pricePoints[i - 1],
-                        index: i - 1,
-                        profit: 0
-                    });
-                }
-            }
-            
-            return zeroPoints;
+           // Find ranges where profit crosses zero
+           const ranges = findProfitCrossingRanges(pricePoints, profitPoints);
+           
+           // Calculate zero-profit prices for each range
+           const zeroPrices = calculatePricesAtZeroProfit(ranges);
+           
+           // Convert to zero points format with indices
+           return zeroPrices.map(price => ({
+               price: price,
+               index: pricePoints.findIndex(p => p >= price),
+               profit: 0
+           }));
         }
 
         function addPosition() {
