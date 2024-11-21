@@ -391,6 +391,13 @@
             };
         }
 
+        function roundToMillions(value, roundUp) {
+            const million = 1000000;
+            return roundUp ? 
+                Math.ceil(value / million) * million :
+                Math.floor(value / million) * million;
+        }
+
         function calculateAndDraw() {
             if (positions.length === 0) {
                 alert('請先新增部位');
@@ -425,6 +432,9 @@
                 Math.round(maxProfit).toLocaleString() + ' TWD';
             document.getElementById('maxLoss').textContent = 
                 Math.round(maxLoss).toLocaleString() + ' TWD';
+
+            const yAxisMax = roundToMillions(maxProfit, true);   // Round up for max
+            const yAxisMin = roundToMillions(maxLoss, false);    // Round down for min
 
             if (chart) {
                 chart.destroy();
@@ -471,6 +481,8 @@
                 },
                 scales: {
                     y: {
+                        min: yAxisMin,
+                        max: yAxisMax,
                         title: {
                             display: true,
                             text: '損益 (TWD)'
