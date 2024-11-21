@@ -349,7 +349,8 @@
 
             positions.forEach(position => {
                 let profit = 0;
-                const value = position.quantity * position.price * 200;
+                const contractSize = position.type.includes('Future') ? 200 : 50;  // Future $200, Option $50
+                const value = position.quantity * position.price * contractSize;
 
                 switch(position.type) {
                     case 'sellPut':
