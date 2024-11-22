@@ -112,18 +112,37 @@
 
         <div class="form-group">
             <label>新增部位</label>
-            <select id="positionType">
-                <option value="sellPut">賣出 Put</option>
-                <option value="sellCall">賣出 Call</option>
-                <option value="buyPut">買入 Put</option>
-                <option value="buyCall">買入 Call</option>
-                <option value="buyFuture">買入期貨</option>
-                <option value="sellFuture">賣出期貨</option>
+            
+            <!-- Type Selection -->
+            <select id="productType" onchange="toggleInputForm()">
+                <option value="option">選擇權</option>
+                <option value="future">期貨</option>
             </select>
-            <input type="number" id="strikePrice" placeholder="履約價" step="50">
-            <input type="number" id="quantity" placeholder="口數">
-            <input type="number" id="price" placeholder="成交價" step="0.1">
-            <button onclick="addPosition()">新增部位</button>
+    
+            <!-- Options Form -->
+            <div id="optionForm">
+                <select id="optionType">
+                    <option value="sellPut">賣出 Put</option>
+                    <option value="sellCall">賣出 Call</option>
+                    <option value="buyPut">買入 Put</option>
+                    <option value="buyCall">買入 Call</option>
+                </select>
+                <input type="number" id="optionStrike" placeholder="履約價" step="50">
+                <input type="number" id="optionQty" placeholder="口數">
+                <input type="number" id="optionPrice" placeholder="成交價" step="0.1">
+                <button onclick="addOptionPosition()">新增選擇權</button>
+            </div>
+    
+            <!-- Futures Form -->
+            <div id="futureForm" style="display:none;">
+                <select id="futureType">
+                    <option value="buyFuture">買入期貨</option>
+                    <option value="sellFuture">賣出期貨</option>
+                </select>
+                <input type="number" id="futureQty" placeholder="口數">
+                <input type="number" id="futurePrice" placeholder="成交價" step="0.1">                
+                <button onclick="addFuturePosition()">新增期貨</button>
+            </div>
         </div>
 
         <table id="positionTable">
@@ -320,11 +339,17 @@
            }));
         }
 
-        function addPosition() {
-            const type = document.getElementById('positionType').value;
-            const strikePrice = parseFloat(document.getElementById('strikePrice').value);
-            const quantity = parseInt(document.getElementById('quantity').value);
-            const price = parseFloat(document.getElementById('price').value);
+        function toggleInputForm() {
+            const productType = document.getElementById('productType').value;
+            document.getElementById('optionForm').style.display = productType === 'option' ? 'inline' : 'none';
+            document.getElementById('futureForm').style.display = productType === 'future' ? 'inline' : 'none';
+        }
+
+        function addOptionPosition() {
+            const type = document.getElementById('optionType').value;
+            const strikePrice = parseFloat(document.getElementById('optionStrike').value);
+            const quantity = parseInt(document.getElementById('optionQty').value);
+            const price = parseFloat(document.getElementById('optionPrice').value);
 
             if (!strikePrice || !quantity || !price) {
                 alert('請填寫所有欄位');
@@ -338,13 +363,38 @@
                 price
             });
             updatePositionTable();
-            clearInputs();
+            clearOptionInputs();
         }
 
-        function clearInputs() {
-            document.getElementById('strikePrice').value = '';
-            document.getElementById('quantity').value = '';
-            document.getElementById('price').value = '';
+        function addFuturePosition() {
+            const type = document.getElementById('futureType').value;
+            const quantity = parseInt(document.getElementById('futureQty').value);
+            const price = parseFloat(document.getElementById('futurePrice').value);
+
+            if (!quantity || !price) {
+                alert('請填寫所有欄位');
+                return;
+            }
+
+            positions.push({
+                type,
+                strikePrice: price,  // For futures, strike price is entry price
+                quantity,
+                price
+            });
+            updatePositionTable();
+            clearFutureInputs();
+        }
+
+        function clearOptionInputs() {
+            document.getElementById('optionStrike').value = '';
+            document.getElementById('optionQty').value = '';
+            document.getElementById('optionPrice').value = '';
+        }
+
+        function clearFutureInputs() {
+            document.getElementById('futureQty').value = '';
+            document.getElementById('futurePrice').value = '';
         }
 
         function removePosition(index) {
@@ -355,14 +405,15 @@
         function updatePositionTable() {
             const tbody = document.querySelector('#positionTable tbody');
             tbody.innerHTML = '';
-
+    
             positions.forEach((position, index) => {
                 const tr = document.createElement('tr');
                 const typeText = getTypeText(position.type);
+                const isFuture = position.type.includes('Future');
                 
                 tr.innerHTML = `
                     <td>${typeText}</td>
-                    <td>${position.strikePrice}</td>
+                    <td>${isFuture ? 'N/A' : position.strikePrice}</td>
                     <td>${position.quantity}</td>
                     <td>${position.price}</td>
                     <td><button class="remove" onclick="removePosition(${index})">移除</button></td>
@@ -393,22 +444,22 @@
 
                 switch(position.type) {
                     case 'sellPut':
-                        profit = value - position.quantity * Math.max(0, position.strikePrice - spotPrice) * 200;
+                        profit = value - position.quantity * Math.max(0, position.strikePrice - spotPrice) * contractSize;
                         break;
                     case 'sellCall':
-                        profit = value - position.quantity * Math.max(0, spotPrice - position.strikePrice) * 200;
+                        profit = value - position.quantity * Math.max(0, spotPrice - position.strikePrice) * contractSize;
                         break;
                     case 'buyPut':
-                        profit = -value + position.quantity * Math.max(0, position.strikePrice - spotPrice) * 200;
+                        profit = -value + position.quantity * Math.max(0, position.strikePrice - spotPrice) * contractSize;
                         break;
                     case 'buyCall':
-                        profit = -value + position.quantity * Math.max(0, spotPrice - position.strikePrice) * 200;
+                        profit = -value + position.quantity * Math.max(0, spotPrice - position.strikePrice) * contractSize;
                         break;
                     case 'buyFuture':
-                        profit = position.quantity * (spotPrice - position.strikePrice) * 200;
+                        profit = position.quantity * (spotPrice - position.strikePrice) * contractSize;
                         break;
                     case 'sellFuture':
-                        profit = position.quantity * (position.strikePrice - spotPrice) * 200;
+                        profit = position.quantity * (position.strikePrice - spotPrice) * contractSize;
                         break;
                 }
                 totalProfit += profit;
