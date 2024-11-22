@@ -21,6 +21,15 @@
             padding: 20px;
             margin-top: 20px;
         }
+        .controls-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .sub-controls {
+            display: inline-flex;
+            gap: 10px;
+        }
         .form-group {
             margin-bottom: 15px;
         }
@@ -113,35 +122,37 @@
         <div class="form-group">
             <label>新增部位</label>
             
-            <!-- Type Selection -->
-            <select id="productType" onchange="toggleInputForm()">
-                <option value="option">選擇權</option>
-                <option value="future">期貨</option>
-            </select>
-    
-            <!-- Options Form -->
-            <div id="optionForm">
-                <select id="optionType">
-                    <option value="sellPut">賣出 Put</option>
-                    <option value="sellCall">賣出 Call</option>
-                    <option value="buyPut">買入 Put</option>
-                    <option value="buyCall">買入 Call</option>
+            <!-- Type Selection Container -->
+            <div class="controls-container">
+                <select id="productType" onchange="toggleInputForm()">
+                    <option value="option">選擇權</option>
+                    <option value="future">期貨</option>
                 </select>
-                <input type="number" id="optionStrike" placeholder="履約價" step="50">
-                <input type="number" id="optionQty" placeholder="口數">
-                <input type="number" id="optionPrice" placeholder="成交價" step="0.1">
-                <button onclick="addOptionPosition()">新增選擇權</button>
-            </div>
     
-            <!-- Futures Form -->
-            <div id="futureForm" style="display:none;">
-                <select id="futureType">
-                    <option value="buyFuture">買入期貨</option>
-                    <option value="sellFuture">賣出期貨</option>
-                </select>
-                <input type="number" id="futureQty" placeholder="口數">
-                <input type="number" id="futurePrice" placeholder="成交價" step="0.1">                
-                <button onclick="addFuturePosition()">新增期貨</button>
+                <!-- Options Form -->
+                <div id="optionForm" class="sub-controls">
+                    <select id="optionType">
+                        <option value="sellPut">賣出 Put</option>
+                        <option value="sellCall">賣出 Call</option>
+                        <option value="buyPut">買入 Put</option>
+                        <option value="buyCall">買入 Call</option>
+                    </select>
+                    <input type="number" id="optionStrike" placeholder="履約價" step="50">
+                    <input type="number" id="optionQty" placeholder="口數">
+                    <input type="number" id="optionPrice" placeholder="成交價" step="0.1">
+                    <button onclick="addOptionPosition()">新增選擇權</button>
+                </div>
+    
+                <!-- Futures Form -->
+                <div id="futureForm" class="sub-controls" style="display:none;">
+                    <select id="futureType">
+                        <option value="buyFuture">買入期貨</option>
+                        <option value="sellFuture">賣出期貨</option>
+                    </select>
+                    <input type="number" id="futureQty" placeholder="口數">
+                    <input type="number" id="futurePrice" placeholder="成交價" step="0.1">
+                    <button onclick="addFuturePosition()">新增期貨</button>
+                </div>
             </div>
         </div>
 
