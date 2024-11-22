@@ -146,8 +146,10 @@
                 <!-- Futures Form -->
                 <div id="futureForm" class="sub-controls" style="display:none;">
                     <select id="futureType">
-                        <option value="buyFuture">買入期貨</option>
-                        <option value="sellFuture">賣出期貨</option>
+                        <option value="buyLargeFuture">買入(大台)</option>
+                        <option value="sellLargeFuture">賣出(大台)</option>
+                        <option value="buySmallFuture">買入(小台)</option>
+                        <option value="sellSmallFuture">賣出(小台)</option>
                     </select>
                     <input type="number" id="futureQty" placeholder="口數">
                     <input type="number" id="futurePrice" placeholder="成交價" step="0.1">
@@ -221,7 +223,10 @@
         function loadFromHash(hash) {
             try {
                 const data = JSON.parse(atob(hash.replace(/-/g, '+').replace(/_/g, '/')));
-                const typeMap = ['sellPut', 'sellCall', 'buyPut', 'buyCall', 'buyFuture', 'sellFuture'];
+                const typeMap = [
+                   'sellPut', 'sellCall', 'buyPut', 'buyCall',
+                   'buyLargeFuture', 'sellLargeFuture', 'buySmallFuture', 'sellSmallFuture'
+                ];
                        
                 positions = data.p.map(pos => ({
                    type: typeMap[pos[0]],
@@ -251,7 +256,9 @@
                    pos.type === 'sellCall' ? 1 :
                    pos.type === 'buyPut' ? 2 :
                    pos.type === 'buyCall' ? 3 :
-                   pos.type === 'buyFuture' ? 4 : 5,
+                   pos.type === 'buyLargeFuture' ? 4 :
+                   pos.type === 'sellLargeFuture' ? 5 :
+                   pos.type === 'buySmallFuture' ? 6 : 7,
                    pos.strikePrice,
                    pos.quantity,
                    pos.price
@@ -419,7 +426,7 @@
     
             positions.forEach((position, index) => {
                 const tr = document.createElement('tr');
-                const typeText = getTypeText(position.type);
+                const typeText = getTypeText(position);
                 const isFuture = position.type.includes('Future');
                 
                 tr.innerHTML = `
@@ -433,16 +440,18 @@
             });
         }
 
-        function getTypeText(type) {
+        function getTypeText(position) {
             const types = {
                 'sellPut': '賣出 Put',
                 'sellCall': '賣出 Call',
                 'buyPut': '買入 Put',
                 'buyCall': '買入 Call',
-                'buyFuture': '買入期貨',
-                'sellFuture': '賣出期貨'
+                'buyLargeFuture': '買入期貨(大台)',
+                'sellLargeFuture': '賣出期貨(大台)',
+                'buySmallFuture': '買入期貨(小台)',
+                'sellSmallFuture': '賣出期貨(小台)'
             };
-            return types[type];
+            return types[position.type];
         }
 
         function calculateProfit(spotPrice) {
@@ -450,9 +459,9 @@
 
             positions.forEach(position => {
                 let profit = 0;
-                const contractSize = position.type.includes('Future') ? 200 : 50;  // Future $200, Option $50
+                const contractSize = position.type.includes('LargeFuture') ? 200 : 50;
                 const value = position.quantity * position.price * contractSize;
-
+                
                 switch(position.type) {
                     case 'sellPut':
                         profit = value - position.quantity * Math.max(0, position.strikePrice - spotPrice) * contractSize;
@@ -466,10 +475,12 @@
                     case 'buyCall':
                         profit = -value + position.quantity * Math.max(0, spotPrice - position.strikePrice) * contractSize;
                         break;
-                    case 'buyFuture':
+                    case 'buyLargeFuture':
+                    case 'buySmallFuture':
                         profit = position.quantity * (spotPrice - position.strikePrice) * contractSize;
                         break;
-                    case 'sellFuture':
+                    case 'sellLargeFuture':
+                    case 'sellSmallFuture':
                         profit = position.quantity * (position.strikePrice - spotPrice) * contractSize;
                         break;
                 }
